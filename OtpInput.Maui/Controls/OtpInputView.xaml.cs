@@ -489,14 +489,19 @@ public partial class OtpInputView : ContentView
         // Strip all ZWSP characters to get the pure user input.
         string user = newText.Replace(ZWSP, string.Empty);
 
-        // All native-text mutations are deferred to the next UI pump.
-        // Writing to Entry.Text synchronously from inside TextChanged crashes Android
-        // ("end should be < than charSequence length") because the underlying EditText
-        // is still in the middle of applying the user's keystroke when we re-enter it.
+        // Text mutations need different timing per platform:
+        //   Android: deferring is REQUIRED — writing Entry.Text synchronously from inside
+        //            TextChanged re-enters the EditText and crashes Spannable
+        //            ("end should be < than charSequence length").
+        //   iOS:     deferring BREAKS rapid backspace — the user's next keystroke hits the
+        //            field before the dispatched action has restored the ZWSP sentinel, so
+        //            the TextField is empty and no TextChanged is raised. Run synchronously.
+        // Focus changes are always deferred to avoid re-entrancy while iOS is still
+        // processing the current text-edit notification.
 
         if (user.Length > 1)
         {
-            Dispatcher.Dispatch(() => HandlePaste(index, user));
+            DeferMutation(() => HandlePaste(index, user));
             return;
         }
 
@@ -505,22 +510,24 @@ public partial class OtpInputView : ContentView
             char c = user[0];
             if (!IsCharValid(c))
             {
-                Dispatcher.Dispatch(() => RenderSlot(index));
+                DeferMutation(() => RenderSlot(index));
                 return;
             }
 
             _realValues[index] = c;
-            Dispatcher.Dispatch(() =>
+            DeferMutation(() =>
             {
                 RenderSlot(index);
                 UpdateValueFromSlots();
+                RaiseCompletedIfFull();
+            });
 
+            Dispatcher.Dispatch(() =>
+            {
                 if (index < _entries.Count - 1)
                     FocusIndex(index + 1);
                 else
                     entry.Unfocus();
-
-                RaiseCompletedIfFull();
             });
             return;
         }
@@ -533,17 +540,25 @@ public partial class OtpInputView : ContentView
             bool goBack = !hadValue && index > 0;
             if (goBack) _realValues[index - 1] = EmptySlot;
 
-            Dispatcher.Dispatch(() =>
+            DeferMutation(() =>
             {
                 RenderSlot(index);
-                if (goBack)
-                {
-                    RenderSlot(index - 1);
-                    FocusIndex(index - 1);
-                }
+                if (goBack) RenderSlot(index - 1);
                 UpdateValueFromSlots();
             });
+
+            if (goBack)
+                Dispatcher.Dispatch(() => FocusIndex(index - 1));
         }
+    }
+
+    void DeferMutation(Action action)
+    {
+#if ANDROID
+        Dispatcher.Dispatch(action);
+#else
+        action();
+#endif
     }
 
     void HandlePaste(int startIndex, string pasted)
@@ -604,8 +619,11 @@ public partial class OtpInputView : ContentView
         try
         {
             entry.Text = value;
+            // Force cursor to end. On iOS, a cursor left at position 0 causes the next
+            // backspace to do nothing (no char before it) and no TextChanged is raised,
+            // which is why backspace can feel intermittent.
             var len = value?.Length ?? 0;
-            if (entry.CursorPosition > len) entry.CursorPosition = len;
+            entry.CursorPosition = len;
         }
         finally { _suppress = false; }
     }
