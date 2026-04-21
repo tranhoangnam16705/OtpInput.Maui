@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="OtpInput.Maui/OtpInput.Maui.csproj" Id="bf0c5eff-f1ae-49c9-ad5f-9f6413923187">
+    <Deploy Solution="Debug|*" />
+  </Project>
+</Solution>

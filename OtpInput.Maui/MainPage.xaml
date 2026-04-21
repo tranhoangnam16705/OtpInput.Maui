@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="OtpInput.Maui.MainPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:controls="clr-namespace:OtpInput.Maui.Controls"
+    xmlns:vm="clr-namespace:OtpInput.Maui.ViewModels"
+    Title="OTP Input Demo">
+
+    <ContentPage.BindingContext>
+        <vm:OtpDemoViewModel />
+    </ContentPage.BindingContext>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="28">
+
+            <Label
+                FontAttributes="Bold"
+                FontSize="24"
+                HorizontalOptions="Center"
+                Text="Verify your account" />
+
+            <Label
+                HorizontalTextAlignment="Center"
+                Text="{Binding Status}"
+                TextColor="#555" />
+
+            <!--  Primary: MVVM-bound, outlined, numeric  -->
+            <controls:OtpInputView
+                x:Name="PrimaryOtp"
+                AutoFocus="True"
+                BoxSize="50"
+                Completed="OnOtpCompleted"
+                CornerRadius="12"
+                FontSize="24"
+                InputType="Number"
+                Length="6"
+                Placeholder="------"
+                Spacing="10"
+                State="{Binding State}"
+                StylingMode="Outlined"
+                Value="{Binding Otp}" />
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="12">
+                <Button Command="{Binding VerifyCommand}" Text="Verify" />
+                <Button Command="{Binding ResetCommand}" Text="Reset" />
+            </HorizontalStackLayout>
+
+            <BoxView
+                Margin="0,16"
+                HeightRequest="1"
+                Color="#E0E0E0" />
+
+            <!--  Variant gallery  -->
+            <Label
+                FontAttributes="Bold"
+                FontSize="18"
+                Text="Styling modes" />
+
+            <Label Text="Filled (4 digits, numeric)" TextColor="#666" />
+            <controls:OtpInputView
+                AutoFocus="False"
+                BoxSize="48"
+                CornerRadius="10"
+                InputType="Number"
+                Length="4"
+                StylingMode="Filled" />
+
+            <Label Text="Underlined (6 digits, text)" TextColor="#666" />
+            <controls:OtpInputView
+                AutoFocus="False"
+                BoxSize="40"
+                FontSize="20"
+                InputType="Text"
+                Length="6"
+                StylingMode="Underlined" />
+
+            <Label Text="Password mode (masked digits)" TextColor="#666" />
+            <controls:OtpInputView
+                AutoFocus="False"
+                BoxSize="44"
+                CornerRadius="22"
+                InputType="Password"
+                Length="6"
+                StylingMode="Outlined" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
